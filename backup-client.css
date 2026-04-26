@@ -1,0 +1,28 @@
+/* 1. Global Reset & Body (Cegah Scrollbar Bawaan) */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
+body { overflow: hidden; background: #a9d1ea; }
+
+/* 2. Layout Fullscreen (Checklist Peta Full & No Whitespace) */
+#map-container, #indo-map { width: 100vw; height: 100vh; }
+#map-container { position: relative; }
+
+/* 3. Posisi Absolut untuk Wrapper & SVG overlay */
+#map-wrapper, #route-svg { position: absolute; top: 0; left: 0; }
+
+/* 4. Krusial: Transform origin 0 0 agar titik zoom mengikuti kursor (Checklist Smart Zoom) */
+#map-wrapper { transform-origin: 0 0; } 
+
+/* 5. Object-fit cover agar peta tidak gepeng dan menutupi layar */
+#indo-map { object-fit: cover; pointer-events: none; user-select: none; }
+
+/* 6. Pointer Events None pada SVG agar klik tembus ke map untuk bikin titik */
+#route-svg { width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 1; }
+
+/* 7. Styling Tombol Cari Rute (Floating Button) */
+#btn-route { 
+    position: fixed; bottom: 20px; right: 20px; z-index: 99; 
+    padding: 12px 20px; font-weight: bold; cursor: pointer;
+    background: #fff; border: 3px solid #000; border-radius: 8px; 
+    box-shadow: 4px 4px 0 #000; transition: 0.1s;
+}
+#btn-route:active { transform: translate(3px, 3px); box-shadow: none; }
