@@ -1,13 +1,26 @@
+// MODUL 1: UTILS & STATE MANAGEMENT
 const $ = id => document.getElementById(id), $$ = q => document.querySelectorAll(q);
 
+// Load Data
 let locs = JSON.parse(localStorage.getItem('locs') || '[]');
 let conns = JSON.parse(localStorage.getItem('conns') || '[]');
 let st = { s: 1, x: 0, y: 0, drag: 0, sel: null, sLine: null };
 const w = $('map-wrapper'), svg = $('route-svg'), mc = $('map-container');
+const tr = { 'Kereta': [100, 2500], 'Bus': [60, 1000], 'Pesawat': [500, 10000] };
 
-const save = () => (localStorage.setItem('locs', JSON.stringify(locs)), localStorage.setItem('conns', JSON.stringify(conns)), render());
+// Save & Error Handling
+const save = () => {
+    try {
+        localStorage.setItem('locs', JSON.stringify(locs));
+        localStorage.setItem('conns', JSON.stringify(conns));
+        render();
+    } catch (err) {
+        console.error("Gagal menyimpan data:", err);
+    }
+};
 const upMap = () => w.style.transform = `translate(${st.x}px, ${st.y}px) scale(${st.s})`;
 
+// MODUL 2: MAP INTERACTION (PAN & ZOOM)
 mc.onwheel = e => {
     if (!e.ctrlKey) return; e.preventDefault();
     let ds = e.deltaY > 0 ? 0.9 : 1.1, r = w.getBoundingClientRect();
@@ -51,6 +64,7 @@ w.ondblclick = e => {
     }
 };
 
+// MODUL 3: RENDER ENGINE (UI)
 function render() {
     $$('.pin').forEach(e => e.remove()); svg.innerHTML = '';
     let pairs = {};
@@ -82,14 +96,25 @@ function render() {
     });
 }
 
+// MODUL 4: BUSINESS LOGIC (KONEKSI & HAPUS)
 window.conn = id => {
     if (!st.sel) return st.sel = id, render();
     if (st.sel == id) return st.sel = null, render();
 
-    let d = prompt("Jarak (KM):"), t = prompt("Transport (Kereta/Bus/Pesawat):");
-    if (d && ['Kereta', 'Bus', 'Pesawat'].includes(t)) conns.push({ id: Date.now(), a: st.sel, b: id, d: parseFloat(d), t });
-    else alert("Data tidak valid!");
-    st.sel = null; save();
+    try {
+        let d = prompt("Jarak (KM):"), t = prompt("Transport (Kereta/Bus/Pesawat):");
+
+        // Proteksi Input (Error Handling)
+        if (!d || isNaN(d) || d <= 0) throw new Error("Input jarak tidak valid!");
+        if (!tr[t]) throw new Error("Moda transportasi tidak tersedia!");
+
+        conns.push({ id: Date.now(), a: st.sel, b: id, d: parseFloat(d), t });
+        st.sel = null; save();
+    } catch (err) {
+        alert(err.message); // Tampilkan pesan error ke user
+        st.sel = null;
+        render();
+    }
 };
 
 window.delLoc = id => { locs = locs.filter(x => x.id != id); conns = conns.filter(x => x.a != id && x.b != id); save(); };
@@ -99,12 +124,13 @@ window.onkeydown = e => {
     if (e.key == '+' || e.key == '-') st.s = Math.max(0.5, Math.min(st.s * (e.key == '+' ? 1.1 : 0.9), 5)), upMap();
 };
 
+// MODUL 5: ROUTE FINDER
 window.findRoute = () => {
     if (!$('rt-ui')) document.body.insertAdjacentHTML('beforeend', `
         <div id="rt-ui" style="position:fixed; top:20px; left:20px; background:#fff; padding:15px; border:3px solid #000; border-radius:8px; z-index:999; box-shadow: 4px 4px 0 #000;">
             <h4>🔍 Cari Rute</h4><br>
             <input id="rF" placeholder="Dari Lokasi..." onkeyup="chk()"> <input id="rT" placeholder="Ke Lokasi..." onkeyup="chk()"><br><br>
-            Sort: <select id="rS"><option value="time">Tercepat (Waktu)</option><option value="cost">Termurah (Biaya)</option></select><br><br>
+            Sort: <select id="rS" onchange="if(!$('rB').disabled) calc()"><option value="time">Tercepat (Waktu)</option><option value="cost">Termurah (Biaya)</option></select><br><br>
             <button id="rB" disabled onclick="calc()">Cari</button> <button onclick="$('rt-ui').remove()">Tutup</button>
             <div id="rR" style="max-height:300px; overflow-y:auto; margin-top:15px;"></div>
         </div>`);
@@ -116,9 +142,12 @@ window.chk = () => {
     $('rB').disabled = !(f && t);
 };
 
+// Menghitung Biaya dan Waktu
 window.calc = () => {
     let f = locs.find(l => l.n.toLowerCase() == $('rF').value.toLowerCase());
     let t = locs.find(l => l.n.toLowerCase() == $('rT').value.toLowerCase());
+
+    if (!f || !t) return;
 
     let paths = [], q = [[f.id, [], 0, 0]];
     let tc = { 'Kereta': [100, 2500], 'Bus': [60, 1000], 'Pesawat': [500, 10000] };
